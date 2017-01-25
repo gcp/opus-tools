@@ -31,21 +31,13 @@ noinst_HEADERS = src/arch.h \
 
 EXTRA_DIST = Makefile.unix \
              man/opusrtp.1 \
-             opus-tools.sln \
-             src/opusdec.vcxproj.filters \
-             src/opusinfo.vcxproj.filters \
-             src/opusenc.vcxproj.filters \
-             src/opusinfo.vcxproj \
-             src/opusenc.vcxproj \
-             src/opusdec.vcxproj \
              include/getopt.h \
              share/getopt.c \
              share/getopt1.c \
              win32/genversion.bat \
              win32/config.h \
              win32/unicode_support.h \
-             win32/unicode_support.c \
-             win32/version.h
+             win32/unicode_support.c
 
 dist_man_MANS = man/opusenc.1 man/opusdec.1 man/opusinfo.1
 

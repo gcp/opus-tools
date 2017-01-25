@@ -125,6 +125,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder,
           char *entry;
           char *end;
           entry=(char *)comments[i].entry;
+          if(!entry)continue;
           /*Check for ReplayGain tags.
             Parse the ones we have R128 equivalents for, and skip the others.*/
           if(oi_strncasecmp(entry,"REPLAYGAIN_REFERENCE_LOUDNESS=",30)==0){
@@ -197,6 +198,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder,
         size_t buf_sz;
         size_t b64_sz;
         size_t offs;
+        if(!inopt->copy_pictures)break;
         mime_type_length=strlen(metadata->data.picture.mime_type);
         description_length=strlen((char *)metadata->data.picture.description);
         buf_sz=32+mime_type_length+description_length
