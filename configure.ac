@@ -146,7 +146,7 @@ AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
 
 dnl check for opusfile
 AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
-      [PKG_CHECK_MODULES([OPUSFILE],[opusfile >= 0.8])],
+      [PKG_CHECK_MODULES([OPUSFILE],[opusfile >= 0.5])],
       [
         dnl Fall back to AC_CHECK_*
         AC_CHECK_LIB([opusfile],[op_pcm_seek],[
