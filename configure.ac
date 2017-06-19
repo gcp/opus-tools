@@ -183,6 +183,31 @@ AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
         ])
       ])
 
+dnl check for libopusend
+AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
+      [PKG_CHECK_MODULES([LIBOPUSENC],[libopusenc >= 0.1])],
+      [
+        dnl Fall back to AC_CHECK_*
+        AC_CHECK_LIB([opusenc],[ope_encoder_write],[
+          LIBOPUSENC_LIBS="-lopusenc"
+        ],[
+          AC_MSG_ERROR([
+            Couldn't find the libopusenc library, which is required
+            to build this package!
+
+            Please install it.
+          ])
+        ])
+        AC_CHECK_HEADER([opus/opusenc.h],[],[
+          AC_MSG_ERROR([
+            Couldn't find the libopusenc library headers,
+            which is required to build this package.
+
+            Please install the development version of libopusenc.
+          ])
+        ])
+      ])
+
 dnl check for OSS
 HAVE_OSS=no
 AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
