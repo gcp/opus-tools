@@ -60,8 +60,8 @@ opusenc_LDADD = $(OPUS_LIBS) $(LIBOPUSENC_LIBS) $(FLAC_LIBS) $(OGG_LIBS) $(LIBM)
 opusenc_MANS = man/opusenc.1
 
 opusdec_SOURCES = src/opus_header.c src/wav_io.c src/wave_out.c src/opusdec.c src/resample.c src/diag_range.c win32/unicode_support.c
-opusdec_CPPFLAGS = $(AM_CPPFLAGS) $(resampler_CPPFLAGS)
-opusdec_LDADD = $(OPUS_LIBS) $(OGG_LIBS) $(LIBM)
+opusdec_CPPFLAGS = $(AM_CPPFLAGS) $(resampler_CPPFLAGS) $(OPUSFILE_CFLAGS)
+opusdec_LDADD = $(OPUS_LIBS) $(OPUSFILE_LIBS) $(OGG_LIBS) $(LIBM)
 opusdec_MANS = man/opusdec.1
 
 opusinfo_SOURCES = src/opus_header.c src/opusinfo.c src/info_opus.c src/picture.c win32/unicode_support.c
