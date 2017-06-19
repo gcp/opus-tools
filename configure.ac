@@ -144,6 +144,45 @@ AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
   ]))
  ])
 
+dnl check for opusfile
+AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
+      [PKG_CHECK_MODULES([OPUSFILE],[opusfile >= 0.8])],
+      [
+        dnl Fall back to AC_CHECK_*
+        AC_CHECK_LIB([opusfile],[op_pcm_seek],[
+          dnl Check if we need extra link arguments for opusurl.
+          AC_CHECK_FUNC([op_open_url], [
+            OPUSFILE_LIBS="-lopusfile"
+          ],[
+             AC_CHECK_LIB([opusurl],[op_open_url],[
+               OPUSFILE_LIBS="-lopusfile -lopusurl"
+             ])
+          ],[
+            AC_MSG_ERROR([
+              Couldn't find https support for the opusfile library,
+              which is required to build this package.
+
+              Please check your opusfile package config.
+            ])
+          ])
+        ],[
+          AC_MSG_ERROR([
+            Couldn't find the opusfile library, which is required
+            to build this package!
+
+            Please install it.
+          ])
+        ])
+        AC_CHECK_HEADER([opus/opusfile.h],[],[
+          AC_MSG_ERROR([
+            Couldn't find the opusfile library headers,
+            which is required to build this package.
+
+            Please install the development version of opusfile.
+          ])
+        ])
+      ])
+
 dnl check for OSS
 HAVE_OSS=no
 AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
