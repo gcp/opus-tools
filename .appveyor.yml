@@ -1,0 +1,43 @@
+image: Visual Studio 2015
+configuration:
+- Debug
+- Release
+
+platform:
+- Win32
+- x64
+
+environment:
+  sample_url: https://people.xiph.org/~giles/2012/opus/ehren-paper_lights-96.opus
+  opus_url: https://ci.appveyor.com/api/projects/$(APPVEYOR_ACCOUNT_NAME)/opus/artifacts/opus.zip
+
+install:
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - 'curl -LOG --data-urlencode "job=Configuration: %CONFIGURATION%; Platform: %PLATFORM%" %OPUS_URL%'
+  - 7z x opus.zip -oopus-artifacts
+  - move /Y opus-artifacts ..\opus
+  - git clone -q https://github.com/xiph/ogg.git ..\ogg
+  - msbuild "..\ogg\win32\VS2015\libogg_static.sln" /property:Configuration=%CONFIGURATION%;Platform=%PLATFORM% /m /v:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+build:
+  project: win32\VS2015\opus-tools.sln
+  parallel: true
+  verbosity: minimal
+
+after_build:
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - copy /Y COPYING LICENSE
+  - 7z a opus-tools.zip .\win32\VS2015\%PLATFORM%\%CONFIGURATION%\*.exe .\LICENSE
+  - for %%a in (enc dec info) do curl -O https://mf4.xiph.org/jenkins/view/opus/job/opus-tools/ws/man/opus%%a.html
+  - 7z a opus-tools.zip .\opusenc.html .\opusdec.html .\opusinfo.html
+
+test_script:
+  - cd %APPVEYOR_BUILD_FOLDER%\win32\VS2015\%PLATFORM%\%CONFIGURATION%
+  - curl -o original.opus %SAMPLE_URL%
+  - opusdec.exe original.opus decoded.wav
+  - opusenc.exe decoded.wav encoded.opus
+  - opusinfo.exe encoded.opus
+  - appveyor PushArtifact encoded.opus
+
+artifacts:
+  - path: opus-tools.zip

@@ -109,10 +109,12 @@ ogg_packet *op_opushead(void)
 
   if (!data) {
     fprintf(stderr, "Couldn't allocate data buffer.\n");
+    free(op);
     return NULL;
   }
   if (!op) {
     fprintf(stderr, "Couldn't allocate Ogg packet.\n");
+    free(data);
     return NULL;
   }
 
@@ -146,10 +148,12 @@ ogg_packet *op_opustags(void)
 
   if (!data) {
     fprintf(stderr, "Couldn't allocate data buffer.\n");
+    free(op);
     return NULL;
   }
   if (!op) {
     fprintf(stderr, "Couldn't allocate Ogg packet.\n");
+    free(data);
     return NULL;
   }
 
@@ -566,18 +570,21 @@ int rtp_send_file(const char *filename, const char *dest, int port)
   ret = ogg_sync_init(&oy);
   if (ret < 0) {
     fprintf(stderr, "Couldn't initialize Ogg sync state\n");
+    fclose(in);
     return ret;
   }
   while (!feof(in)) {
   in_data = ogg_sync_buffer(&oy, in_size);
   if (!in_data) {
     fprintf(stderr, "ogg_sync_buffer failed\n");
+    fclose(in);
     return -1;
   }
   in_read = fread(in_data, 1, in_size, in);
   ret = ogg_sync_wrote(&oy, in_read);
   if (ret < 0) {
     fprintf(stderr, "ogg_sync_wrote failed\n");
+    fclose(in);
     return ret;
   }
   while (ogg_sync_pageout(&oy, &og) == 1) {
@@ -587,12 +594,14 @@ int rtp_send_file(const char *filename, const char *dest, int port)
         ret = ogg_stream_init(&os, ogg_page_serialno(&og));
         if (ret < 0) {
           fprintf(stderr, "ogg_stream_init failed\n");
+          fclose(in);
           return ret;
         }
         headers++;
       } else if (!ogg_page_bos(&og)) {
         /* We're past the header and haven't found an Opus stream.
          * Time to give up. */
+        fclose(in);
         return 1;
       } else {
         /* try again */
@@ -603,6 +612,7 @@ int rtp_send_file(const char *filename, const char *dest, int port)
     ret = ogg_stream_pagein(&os, &og);
     if (ret < 0) {
       fprintf(stderr, "ogg_stream_pagein failed\n");
+      fclose(in);
       return ret;
     }
     /* read and process available packets */
@@ -652,7 +662,7 @@ int rtp_send_file(const char *filename, const char *addr, int port)
 void write_packet(u_char *args, const struct pcap_pkthdr *header,
                   const u_char *data)
 {
-  state *params = (state *)args;
+  state *params = (state *)(void *)args;
   const unsigned char *packet;
   int size;
   eth_header eth;
@@ -777,6 +787,76 @@ void write_packet(u_char *args, const struct pcap_pkthdr *header,
   }
 }
 
+int extract(const char* input_file)
+{
+  state *params;
+  pcap_t *pcap;
+  char errbuf[PCAP_ERRBUF_SIZE];
+  ogg_packet *op;
+
+  if ((pcap = pcap_open_offline(input_file, errbuf)) == NULL)
+  {
+    fprintf(stderr,"\nError opening dump file\n");
+    return -1;
+  }
+
+  params = malloc(sizeof(state));
+  if (!params) {
+    fprintf(stderr, "Couldn't allocate param struct.\n");
+    pcap_close(pcap);
+    return -1;
+  }
+  params->linktype = pcap_datalink(pcap);
+  params->stream = malloc(sizeof(ogg_stream_state));
+  if (!params->stream) {
+    fprintf(stderr, "Couldn't allocate stream struct.\n");
+    free(params);
+    pcap_close(pcap);
+    return -1;
+  }
+  if (ogg_stream_init(params->stream, rand()) < 0) {
+    fprintf(stderr, "Couldn't initialize Ogg stream state.\n");
+    free(params->stream);
+    free(params);
+    pcap_close(pcap);
+    return -1;
+  }
+  params->out = fopen("rtpdump.opus", "wb");
+  if (!params->out) {
+    fprintf(stderr, "Couldn't open output file.\n");
+    free(params->stream);
+    free(params);
+    pcap_close(pcap);
+    return -2;
+  }
+  params->seq = 0;
+  params->granulepos = 0;
+
+  /* write stream headers */
+  op = op_opushead();
+  ogg_stream_packetin(params->stream, op);
+  op_free(op);
+  op = op_opustags();
+  ogg_stream_packetin(params->stream, op);
+  op_free(op);
+  ogg_flush(params);
+
+  fprintf(stderr, "Capturing packets\n");
+  // read and dispatch packets until EOF is reached
+  pcap_loop(pcap, 0, write_packet, (u_char *)params);
+
+  /* write outstanding data */
+  ogg_flush(params);
+
+  /* clean up */
+  fclose(params->out);
+  ogg_stream_destroy(params->stream);
+  free(params);
+  pcap_close(pcap);
+
+  return 0;
+}
+
 /* use libpcap to capture packets and write them to a file */
 int sniff(char *device)
 {
@@ -798,21 +878,30 @@ int sniff(char *device)
   params = malloc(sizeof(state));
   if (!params) {
     fprintf(stderr, "Couldn't allocate param struct.\n");
+    pcap_close(pcap);
     return -1;
   }
   params->linktype = pcap_datalink(pcap);
   params->stream = malloc(sizeof(ogg_stream_state));
   if (!params->stream) {
     fprintf(stderr, "Couldn't allocate stream struct.\n");
+    free(params);
+    pcap_close(pcap);
     return -1;
   }
   if (ogg_stream_init(params->stream, rand()) < 0) {
     fprintf(stderr, "Couldn't initialize Ogg stream state.\n");
+    free(params->stream);
+    free(params);
+    pcap_close(pcap);
     return -1;
   }
   params->out = fopen("rtpdump.opus", "wb");
   if (!params->out) {
     fprintf(stderr, "Couldn't open output file.\n");
+    free(params->stream);
+    free(params);
+    pcap_close(pcap);
     return -2;
   }
   params->seq = 0;
@@ -847,12 +936,12 @@ int sniff(char *device)
 void opustools_version(void)
 {
   printf("opusrtp %s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
-  printf("Copyright (C) 2012 Xiph.Org Foundation\n");
+  printf("Copyright (C) 2012-2017 Xiph.Org Foundation\n");
 }
 
 void usage(char *exe)
 {
-  printf("Usage: %s [--sniff] <file.opus> [<file2.opus>]\n", exe);
+  printf("Usage: %s [--extract file.pcap] [--sniff] <file.opus> [<file2.opus>]\n", exe);
   printf("\n");
   printf("Sends and receives Opus audio RTP streams.\n");
   printf("\nGeneral Options:\n");
@@ -862,6 +951,7 @@ void usage(char *exe)
   printf(" -d, --destination    Destination address (default 127.0.0.1)\n");
   printf(" -p, --port           Destination port (default 1234)\n");
   printf(" --sniff              Sniff and record Opus RTP streams\n");
+  printf(" -e, --extract        Extract from input pcap file (default input.pcap)\n");
   printf("\n");
   printf("By default, the given file(s) will be sent over RTP.\n");
 }
@@ -870,14 +960,18 @@ int main(int argc, char *argv[])
 {
   int option, i;
   const char *dest = "127.0.0.1";
+#ifdef HAVE_PCAP
+  const char *input_pcap = "input.pcap";
+#endif
   int port = 1234;
   struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"version", no_argument, NULL, 'V'},
     {"quiet", no_argument, NULL, 'q'},
-    {"destination", optional_argument, NULL, 'd'},
-    {"port", optional_argument, NULL, 'p'},
+    {"destination", required_argument, NULL, 'd'},
+    {"port", required_argument, NULL, 'p'},
     {"sniff", no_argument, NULL, 0},
+    {"extract", required_argument, NULL, 'e'},
     {0, 0, 0, 0}
   };
 
@@ -907,6 +1001,16 @@ int main(int argc, char *argv[])
         if (optarg)
             dest = optarg;
         break;
+      case 'e':
+#ifdef HAVE_PCAP
+        if (optarg)
+            input_pcap = optarg;
+        extract(input_pcap);
+        return 0;
+#else
+        fprintf(stderr, "pcap support disabled, sorry.\n");
+        return 1;
+#endif
       case 'p':
         if (optarg)
             port = atoi(optarg);

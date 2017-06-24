@@ -31,13 +31,6 @@ noinst_HEADERS = src/arch.h \
 
 EXTRA_DIST = Makefile.unix \
              man/opusrtp.1 \
-             opus-tools.sln \
-             src/opusdec.vcxproj.filters \
-             src/opusinfo.vcxproj.filters \
-             src/opusenc.vcxproj.filters \
-             src/opusinfo.vcxproj \
-             src/opusenc.vcxproj \
-             src/opusdec.vcxproj \
              include/getopt.h \
              share/getopt.c \
              share/getopt1.c \
@@ -45,7 +38,16 @@ EXTRA_DIST = Makefile.unix \
              win32/config.h \
              win32/unicode_support.h \
              win32/unicode_support.c \
-             win32/version.h
+             win32/VS2015/generate_version.vcxproj \
+             win32/VS2015/opusdec.vcxproj \
+             win32/VS2015/opusdec.vcxproj.filters \
+             win32/VS2015/opusenc.vcxproj \
+             win32/VS2015/opusenc.vcxproj.filters \
+             win32/VS2015/opusinfo.vcxproj \
+             win32/VS2015/opusinfo.vcxproj.filters \
+             win32/VS2015/opus-tools.sln \
+             win32/VS2015/common.props \
+             win32/VS2015/opus-tools.props
 
 dist_man_MANS = man/opusenc.1 man/opusdec.1 man/opusinfo.1
 
@@ -53,13 +55,13 @@ resampler_CPPFLAGS = -DSPX_RESAMPLE_EXPORT= -DRANDOM_PREFIX=opustools -DOUTSIDE_
 
 opusenc_SOURCES = src/opus_header.c src/opusenc.c src/picture.c src/resample.c src/audio-in.c src/diag_range.c src/flac.c src/lpc.c win32/unicode_support.c
 opusenc_CPPFLAGS = $(AM_CPPFLAGS) $(resampler_CPPFLAGS)
-opusenc_CFLAGS = $(AM_CFLAGS) $(FLAC_CFLAGS)
-opusenc_LDADD = $(OPUS_LIBS) $(FLAC_LIBS) $(OGG_LIBS) $(LIBM)
+opusenc_CFLAGS = $(AM_CFLAGS) $(LIBOPUSENC_CFLAGS) $(FLAC_CFLAGS)
+opusenc_LDADD = $(OPUS_LIBS) $(LIBOPUSENC_LIBS) $(FLAC_LIBS) $(OGG_LIBS) $(LIBM)
 opusenc_MANS = man/opusenc.1
 
 opusdec_SOURCES = src/opus_header.c src/wav_io.c src/wave_out.c src/opusdec.c src/resample.c src/diag_range.c win32/unicode_support.c
-opusdec_CPPFLAGS = $(AM_CPPFLAGS) $(resampler_CPPFLAGS)
-opusdec_LDADD = $(OPUS_LIBS) $(OGG_LIBS) $(LIBM)
+opusdec_CPPFLAGS = $(AM_CPPFLAGS) $(resampler_CPPFLAGS) $(OPUSFILE_CFLAGS)
+opusdec_LDADD = $(OPUS_LIBS) $(OPUSFILE_LIBS) $(OGG_LIBS) $(LIBM)
 opusdec_MANS = man/opusdec.1
 
 opusinfo_SOURCES = src/opus_header.c src/opusinfo.c src/info_opus.c src/picture.c win32/unicode_support.c

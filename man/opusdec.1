@@ -11,11 +11,15 @@ opusdec \- decode audio from Opus format to WAV (or simple audio output)
 [
 .B -hV
 ] [
+.B --quiet
+] [
 .B --rate Hz
 ] [
 .B --gain dB
 ] [
 .B --no-dither
+] [
+.B --float
 ] [
 .B --force-wav
 ] [
@@ -61,6 +65,8 @@ Force decoding at sampling rate n Hz
 Adjust the output volume n dB, negative values make the signal quieter.
 .IP "--no-dither"
 Do not dither 16-bit output
+.IP "--float"
+32-bit floating-point files instead of 16-bit files
 .IP "--force-wav"
 Force including a wav header on output (e.g. for non-wav extensions and stdout)
 .IP "--packet-loss"

@@ -144,6 +144,70 @@ AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
   ]))
  ])
 
+dnl check for opusfile
+AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
+      [PKG_CHECK_MODULES([OPUSFILE],[opusfile >= 0.5])],
+      [
+        dnl Fall back to AC_CHECK_*
+        AC_CHECK_LIB([opusfile],[op_pcm_seek],[
+          dnl Check if we need extra link arguments for opusurl.
+          AC_CHECK_FUNC([op_open_url], [
+            OPUSFILE_LIBS="-lopusfile"
+          ],[
+             AC_CHECK_LIB([opusurl],[op_open_url],[
+               OPUSFILE_LIBS="-lopusfile -lopusurl"
+             ])
+          ],[
+            AC_MSG_ERROR([
+              Couldn't find https support for the opusfile library,
+              which is required to build this package.
+
+              Please check your opusfile package config.
+            ])
+          ])
+        ],[
+          AC_MSG_ERROR([
+            Couldn't find the opusfile library, which is required
+            to build this package!
+
+            Please install it.
+          ])
+        ])
+        AC_CHECK_HEADER([opus/opusfile.h],[],[
+          AC_MSG_ERROR([
+            Couldn't find the opusfile library headers,
+            which is required to build this package.
+
+            Please install the development version of opusfile.
+          ])
+        ])
+      ])
+
+dnl check for libopusend
+AS_IF([test "$HAVE_PKG_CONFIG" = "yes"],
+      [PKG_CHECK_MODULES([LIBOPUSENC],[libopusenc >= 0.1])],
+      [
+        dnl Fall back to AC_CHECK_*
+        AC_CHECK_LIB([opusenc],[ope_encoder_write],[
+          LIBOPUSENC_LIBS="-lopusenc"
+        ],[
+          AC_MSG_ERROR([
+            Couldn't find the libopusenc library, which is required
+            to build this package!
+
+            Please install it.
+          ])
+        ])
+        AC_CHECK_HEADER([opus/opusenc.h],[],[
+          AC_MSG_ERROR([
+            Couldn't find the libopusenc library headers,
+            which is required to build this package.
+
+            Please install the development version of libopusenc.
+          ])
+        ])
+      ])
+
 dnl check for OSS
 HAVE_OSS=no
 AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
@@ -261,11 +325,11 @@ AS_IF([test "$enable_pie" = "yes"],
   saved_CFLAGS="$CFLAGS"
   saved_LDFLAGS="$LDFLAGS"
   saved_LIBS="$LIBS"
-  CFLAGS="$CFLAGS -fPIE"
+  CFLAGS="$CFLAGS $OPUS_CFLAGS -fPIE"
   LDFLAGS="$LDFLAGS -pie -Wl,-z,relro -Wl,-z,now"
   LIBS="$LIBS $OPUS_LIBS"
   AC_MSG_CHECKING([for PIE support])
-  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <opus/opus.h>]],
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <opus.h>]],
                                   [[OpusDecoder *dec = opus_decoder_create(48000, 2, 0L)]])],
     [ AC_MSG_RESULT([yes]) ],
     [ AC_MSG_RESULT([no])
